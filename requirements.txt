@@ -1,1 +1,7 @@
 numpy==1.17.2
+matplotlib==3.3.4
+matplotlib-inline==0.1.6
+scikit-image==0.18.3
+scipy==1.8.0
+tifffile==2022.10.10
+spam==0.6.0.3
