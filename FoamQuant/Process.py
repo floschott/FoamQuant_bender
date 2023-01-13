@@ -299,7 +299,7 @@ def BubbleSegmentation(image, SigSeeds=1, SigWatershed=1, watershed_line=False, 
     return labelled_im
 
 
-def RemoveEdgeBubble(image, mask=None, rpercent=None, verbose=False, masktb=None, returnmask=False):
+def RemoveEdgeBubble(image, mask=None, rpercent=None, verbose=False, masktopbottom=None, returnmask=False):
     """
     Remove the bubbles on the image edges and in intersection with the mask (if given)
     
@@ -319,9 +319,9 @@ def RemoveEdgeBubble(image, mask=None, rpercent=None, verbose=False, masktb=None
         if verbose:
             print('Radius given, a cylindrical mask was created')
         mask = MaskCyl(image, rpercent)
-    if masktb != None:
-        mask[:masktb[0]] = 0
-        mask[masktb[1]:] = 0
+    if masktopbottom != None:
+        mask[:masktopbottom[0]] = 0
+        mask[masktopbottom[1]:] = 0
         if verbose:
             print('Crop top & bottom given, a top-bottom edge mask was created')
     
@@ -355,21 +355,20 @@ def RemoveEdgeBubble(image, mask=None, rpercent=None, verbose=False, masktb=None
 
 #------------------------------------------------------------
 
-def RemoveBackground_Batch(series, rawdir, prossdir, imrange, method='white_tophat', radius=5, imN=180, zN=800, top=0, bottom=None, verbose=False, Binning=None):
+def RemoveBackground_Batch(series, rawdir, prossdir, imrange, method='white_tophat', radius=5,  crop=None, bottom=None, verbose=False, Binning=None):
     from tifffile import imsave
     from FoamQuant.Helper import ReadRaw
+    from FoamQuant.Helper import strindex
     #from Package.Basic.ReadRaw import ReadRaw
     #from Package.Process.RemoveBackground import RemoveBackground
     import spam.DIC
     
     for imi in imrange:
-        image = ReadRaw(series, imi, rawdir, zN=zN, top=top, bottom=bottom)
+        image = ReadRaw(series, imi, rawdir, crop=crop)
         #image = RemoveBackground(image, method=method, radius=radius)
         
         # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
+        imifordir = strindex(imi, n0)
         
         if Binning!=None:
             image = spam.DIC.deform.binning(image, Binning)
@@ -378,32 +377,27 @@ def RemoveBackground_Batch(series, rawdir, prossdir, imrange, method='white_toph
             imsave(prossdir + '/2_RemoveBackground/' + series + '/' + series+'_RemoveBackground_'+imifordir, image, bigtiff=True)
         
         if verbose:
-            print(series+' image: '+str(imi)+': Background removed')
+            print(namesave+' '+str(imi)+': done')
             
 
 
-def PhaseSegmentation_Batch(series, rawdir, prossdir, imrange, method='ostu_global', th=None, radius=None, th0=None, th1=None, returnOtsu=False, verbose=False, cropOtsu=False, sufix=None):
+def PhaseSegmentation_Batch(nameread, namesave, dirread, dirsave, imrange, method='ostu_global', th=None, radius=None, th0=None, th1=None, returnOtsu=False, verbose=False, ROIotsu=False, n0=3, endread='.tif',endsave='.tif'):
     from tifffile import imread, imsave
-    #from Package.Process.PhaseSegmentation import PhaseSegmentation
     import numpy as np
+    from FoamQuant.Helper import strindex
     
     Lth=[]
     for imi in imrange:
-        
-        # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
-        
+        imifordir = strindex(imi, n0)
         # read image
-        image = imread(prossdir + '/2_RemoveBackground/' + series + '/' + series+'_RemoveBackground_'+imifordir+'.tif')
+        image = imread(dirread + nameread + imifordir + endread)
         
-        # if or not keep otsu threshold
+        # if keep otsu threshold
         if returnOtsu:
-            # if crop region of interest for Otsu
-            if len(np.shape(cropOtsu))>0:
-                print('CropForOtsu', cropOtsu)
-                image, th = PhaseSegmentation(image[cropOtsu[0]:cropOtsu[1],cropOtsu[2]:cropOtsu[3],cropOtsu[4]:cropOtsu[5]], 
+            # region of interest for Otsu
+            if len(np.shape(ROIotsu))>0:
+                print('ROIotsu', ROIotsu)
+                image, th = PhaseSegmentation(image[ROIotsu[0]:ROIotsu[1],ROIotsu[2]:ROIotsu[3],ROIotsu[4]:ROIotsu[5]], 
                                               method='ostu_global',
                                               returnOtsu=returnOtsu)
             else:
@@ -411,40 +405,27 @@ def PhaseSegmentation_Batch(series, rawdir, prossdir, imrange, method='ostu_glob
                                               method='ostu_global',
                                               returnOtsu=returnOtsu)
             Lth.append(th)
-        
-        # if should should perform segmentation method one by one independently
         else:
-            # if crop region of interest for Otsu
-            if len(np.shape(cropOtsu))>0:
-                image = PhaseSegmentation(image[cropOtsu[0]:cropOtsu[1],cropOtsu[2]:cropOtsu[3],cropOtsu[4]:cropOtsu[5]],
-                                          method=method, th=th, radius=radius, th0=th0, th1=th1, returnOtsu=False)
-            else:
-                image = PhaseSegmentation(image, method=method, th=th, radius=radius, th0=th0, th1=th1, returnOtsu=False)
+            image = PhaseSegmentation(image, method=method, th=th, radius=radius, th0=th0, th1=th1, returnOtsu=False)
+            
         # save image
-        if sufix!=None:
-            imsave(prossdir + '/3_PhaseSegmented_'+sufix+'/' + series + '/' + series+'_PhaseSegmented_'+imifordir+'.tif', np.asarray(image, dtype='uint8'), bigtiff=True)
-        else:
-            imsave(prossdir + '/3_PhaseSegmented/' + series + '/' + series+'_PhaseSegmented_'+imifordir+'.tif', np.asarray(image, dtype='uint8'), bigtiff=True)
+        imsave(dirsave + namesave + imifordir + endsave, np.asarray(image, dtype='uint8'), bigtiff=True)
         # if verbose
         if verbose:
-            print(series+' image: '+str(imi)+': Phase Segmented')
+            print(namesave+' '+str(imi)+': done')
     
     # return otsu threshold if true
     if returnOtsu:
         return Lth
     
-def Masking_Batch(series, readdir, savedir, imrange, verbose=False, sufix=None):
+def Masking_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, sufix=None):
     from tifffile import imread, imsave
     #from Package.Process.MaskCyl import MaskCyl
+    from FoamQuant.Helper import strindex
     
     for imi in imrange:
-        
         # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
-        
-        
+        imifordir = strindex(imi, n0)
         # read image
         if sufix!=None:
             image = imread(readdir + '/3_PhaseSegmented_'+sufix+'/' + series + '/' + series+'_PhaseSegmented_'+imifordir+'.tif')
@@ -464,105 +445,84 @@ def Masking_Batch(series, readdir, savedir, imrange, verbose=False, sufix=None):
         
         # if verbose
         if verbose:
-            print(series+' image: '+str(imi)+': Masked')
+            print(namesave+imifordir+': done')
             
     
-def RemoveSpeckleBin_Batch(series, readdir, savedir, imrange, verbose=False, sufix=None):
+def RemoveSpeckleBin_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tif', n0=3, Cobj=0.5, Chole=0.5):
     from tifffile import imread, imsave
     #from Package.Process.RemoveSpeckleBin import RemoveSpeckleBin
+    from FoamQuant.Helper import strindex
+    
+    # read first image
+    imifordir = strindex(imrange[0], n0)
+    image = imread(dirread + nameread + imifordir + endread)  
+    image, Vobj, Vhole = RemoveSpeckleBin(image, GiveVolumes=True)
+    print('First image (vox): maxObj',Vobj, 'maxHole',Vhole)
+    # Volume thesholds
+    Vminobj = round(Vobj*Cobj)
+    Vminhole = round(Vhole*Chole)
+    print('Thresholds (vox): thrObj',Vminobj, 'thrHole',Vminhole)
     
     for imi in imrange:
-        
-        # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
-        
+        imifordir = strindex(imi, n0)
         # read image
-        if sufix!=None:
-            image = imread(readdir + '/4_Masked_'+sufix+'/' + series + '/' + series+'_Masked_'+imifordir+'.tif')
-        else:
-            image = imread(readdir + '/4_Masked/' + series + '/' + series+'_Masked_'+imifordir+'.tif')
-        
-        
-        if imi == imrange[0]:
-            image, Vobj, Vhole = RemoveSpeckleBin(image, GiveVolumes=True)
-            print('First image: mObj',Vobj, 'mHole',Vhole)
-        else:
-            image = RemoveSpeckleBin(image, Vminobj=Vobj//2, Vminhole=Vhole//2)
-        
+        image = imread(dirread + nameread + imifordir + endread)        
+        # remove the small holes and objects
+        image = RemoveSpeckleBin(image, Vminobj=Vminobj, Vminhole=Vminhole)
         # save image
-        if sufix!=None:
-            imsave(savedir + '/5_Cleaned_'+sufix+'/' + series + '/' + series+'_Cleaned_'+imifordir+'.tif', image, bigtiff=True)
-        else:
-            imsave(savedir + '/5_Cleaned/' + series + '/' + series+'_Cleaned_'+imifordir+'.tif', image, bigtiff=True)
-        
+        imsave(dirsave + namesave + imifordir + endsave, image, bigtiff=True)
         # if verbose
         if verbose:
-            print(series+' image: '+str(imi)+': Small obj & holes removed')
+            print(namesave+imifordir+': done')
             
             
-def BubbleSegmentation_Batch(series, readdir, savedir, imrange, SigSeeds=1, SigWatershed=1, watershed_line=False, radius_opening=None, verbose=False,esti_min_dist=None, sufix=None, compactness=None, writeparameters=False, Binning=None):
+def BubbleSegmentation_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tif', n0=3, writeparameters=False, Binning=None, esti_min_dist=None, SigSeeds=1, SigWatershed=1, watershed_line=False, compactness=None, radius_opening=None, ITK=False, ITKLevel=1):
     from tifffile import imread, imsave
-    #from Package.Process.BubbleSegmentation import BubbleSegmentation
     import os
-    
+    from FoamQuant.Helper import strindex
     
     #Check saving directory
-    if sufix != None:
-        path = savedir + '/6_BubbleSegmented_'+sufix+'/' + series
-    else:
-        path = savedir + '/6_BubbleSegmented/' + series
-    isExist = os.path.exists(path)
+    isExist = os.path.exists(dirsave)
     print('Path exist:', isExist)
     if not isExist:
-        print('Error: Saving path does not exist', path)
+        print('Error: saving path does not exist', dirsave)
         return
     
-    
-    if writeparameters:
-        file1 = open(path+'/'+series+'_ParametersFile.txt',"w")
-        L = ["series \n",str(series),
-             "\n imrange \n",str(imrange),
-             "\n SigSeeds \n",str(SigSeeds),
-             "\n SigWatershed \n",str(SigWatershed),
-             "\n watershed_line \n",str(watershed_line),
-             "\n radius_opening \n",str(radius_opening),
-             "\n Twatershed_line \n",str(watershed_line),
-             "\n radius_opening \n",str(radius_opening),
-             "\n esti_min_dist \n",str(esti_min_dist),
-             "\n compactness \n",str(compactness)] 
-        file1.writelines(L)
-        file1.close() 
-    
-    for imi in imrange:
-        
-        # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
-        
-        # read image
-        if sufix != None:
-            image = imread(readdir + '/5_Cleaned_'+sufix+'/' + series + '/' + series+'_Cleaned_'+imifordir+'.tif')
-        else:
-            image = imread(readdir + '/5_Cleaned/' + series + '/' + series+'_Cleaned_'+imifordir+'.tif')
-            
-        if Binning != None:
-            import spam.DIC
-            image = spam.DIC.deform.binning(image, Binning)
-            image = BubbleSegmentation(image, 
-                                       SigSeeds//Binning, 
-                                       SigWatershed//Binning, 
-                                       watershed_line, 
-                                       radius_opening, 
-                                       verbose, 
-                                       esti_min_dist//Binning, 
-                                       compactness)
-            # save image
-            imsave(path + '/' + series+'_BubbleSegmented_Bin'+str(Binning)+'_'+imifordir+'.tif', image, bigtiff=True)
-            
-        else:
+    if ITK:
+        import spam.label
+        labelled_im = spam.label.ITKwatershed.watershed(image, markers=None, watershedLevel=ITKLevel)
+        if verbose:
+            print(namesave+' '+str(imi)+': ITK done')
+    else:
+        # write parameters
+        if writeparameters:
+            file1 = open(dirsave + namesave + '_WatershedParameters.txt',"w")
+            L = ["nameread \n",str(nameread),
+                 "\n imrange \n",str(imrange),
+                 "\n SigSeeds \n",str(SigSeeds),
+                 "\n SigWatershed \n",str(SigWatershed),
+                 "\n watershed_line \n",str(watershed_line),
+                 "\n radius_opening \n",str(radius_opening),
+                 "\n Twatershed_line \n",str(watershed_line),
+                 "\n radius_opening \n",str(radius_opening),
+                 "\n esti_min_dist \n",str(esti_min_dist),
+                 "\n compactness \n",str(compactness)] 
+            file1.writelines(L)
+            file1.close() 
+
+        for imi in imrange:
+            # image string index
+            imifordir = strindex(imi, n0)
+            # read image
+            image = imread(dirread + nameread + imifordir + endread)
+            # if binning
+            if Binning != None:
+                import spam.DIC
+                image = spam.DIC.deform.binning(image, Binning)
+
+                Binning = SigSeeds//Binning
+                SigWatershed = SigWatershed//Binning
+                esti_min_dist = esti_min_dist//Binning
             # Bubble segmentation
             image = BubbleSegmentation(image, 
                                        SigSeeds, 
@@ -571,67 +531,50 @@ def BubbleSegmentation_Batch(series, readdir, savedir, imrange, SigSeeds=1, SigW
                                        radius_opening, 
                                        verbose, 
                                        esti_min_dist, 
-                                       compactness)        
-            
+                                       compactness)
             # save image
-            imsave(path + '/' + series+'_BubbleSegmented_'+imifordir+'.tif', image, bigtiff=True)
+            imsave(dirsave + namesave + imifordir + endsave, image, bigtiff=True)
+            # if verbose
+            if verbose:
+                print(namesave+imifordir+': done')
             
-        # if verbose
-        if verbose:
-            print(series+' '+str(imi)+': done')
             
-            
-def RemoveEdgeBubble_Batch(series, readdir, savedir, imrange, mask=None, verbose=False, masktb=None, rpercent=None, sufix=None, NamExtention=None,Binning=None):
+def RemoveEdgeBubble_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tif', n0=3, maskcyl=False, masktopbottom=None, rpercent=None):
     from tifffile import imread, imsave
     #from Package.Process.RemoveEdgeBubble import RemoveEdgeBubble
     import os
+    from FoamQuant.Helper import strindex
     
     #Check directory
-    if sufix != None:
-        path = savedir + '/7_BubbleSegmented_NoEdge_'+sufix+'/' + series
-    else:
-        path = savedir + '/7_BubbleSegmented_NoEdge/' + series
-        
-    isExist = os.path.exists(path)
+    isExist = os.path.exists(dirread)
     print('Path exist:', isExist)
     if not isExist:
-        print('Error: Saving path does not exist', path)
+        print('Error: Saving path does not exist', dirread)
         return
         
     for imi in imrange:
         # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
-
+        imifordir = strindex(imi, n0)
         # read image
-        if Binning != None:
-            image = imread(readdir + '/6_BubbleSegmented_'+sufix+'/' + series + '/' +series+'_BubbleSegmented_Bin'+str(Binning)+'_'+imifordir+'.tif')
-        elif sufix != None:
-            image = imread(readdir + '/6_BubbleSegmented_'+sufix+'/' + series + '/' + series+'_BubbleSegmented_'+imifordir+NamExtention+'.tif')
-        else:
-            image = imread(readdir + '/6_BubbleSegmented/' + series + '/' + series+'_BubbleSegmented_'+imifordir+NamExtention+'.tif')
+        image = imread(dirread + nameread + imifordir + endread)
         
-   
-        if imi == imrange[0]:
+        # for the first image, get the cylindrical mask
+        if maskcyl and imi == imrange[0]:
             image, mask = RemoveEdgeBubble(image, 
-                                           verbose=verbose, 
-                                           masktb=masktb, 
+                                           masktopbottom=masktopbottom, 
                                            rpercent=rpercent, 
                                            returnmask=True) 
-        if imi > imrange[0]:
+        elif maskcyl:
             image = RemoveEdgeBubble(image, 
                                      mask,
-                                     returnmask=False)        
-
-        # save image
-        if Binning != None:
-            imsave(savedir + '/7_BubbleSegmented_NoEdge_'+sufix+'/' + series + '/' + series+'_BubbleSegmented_NoEdge_Bin'+str(Binning)+'_'+imifordir, image, bigtiff=True)
-        elif sufix != None:
-            imsave(savedir + '/7_BubbleSegmented_NoEdge_'+sufix+'/' + series + '/' + series+'_BubbleSegmented_NoEdge_'+imifordir+NamExtention, image, bigtiff=True)
+                                     returnmask=False)
         else:
-             imsave(savedir + '/7_BubbleSegmented_NoEdge/' + series + '/' + series+'_BubbleSegmented_NoEdge_'+imifordir+NamExtention, image, bigtiff=True)               
+            image = RemoveEdgeBubble(image,
+                                     masktopbottom=masktopbottom,
+                                     returnmask=False)
+        # save image
+        imsave(dirsave + namesave + imifordir + endsave, image, bigtiff=True)
 
         # if verbose
         if verbose:
-            print(series+' image: '+str(imi)+': Edges removed')
+            print(namesave+imifordir+': done')

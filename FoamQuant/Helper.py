@@ -21,7 +21,7 @@ def RangeList(i1, i2, verbose=False):
         print(List)
     return List
 
-def ReadRaw(series, imi, rawdir, zN=800, top=0, bottom=None):
+def ReadRaw(series, imi, rawdir, crop=None):
     import numpy as np
     from tifffile import imread
     
@@ -29,19 +29,33 @@ def ReadRaw(series, imi, rawdir, zN=800, top=0, bottom=None):
     imistr = str(imi)
     imistrlen = len(imistr)
     imifordir = (5-imistrlen)*'0'+imistr
-    if bottom != None:
-        zN=bottom
+    
+    if len(np.shape(crop))> 0:
+        zm=crop[0]
+        zM=crop[1]
+        ym=crop[2]
+        yM=crop[3]
+        xm=crop[4]
+        xM=crop[5]
+    else:
+        zm=0
+        zM=800
+        ym=0
+        yM=2016
+        xm=0
+        xM=2016
         
     # Init image
-    image = np.zeros((zN-top,2016,2016))
-    for zi in range(top, zN):
+    image = np.zeros((zM-zm,yM-ym,xM-xm))
+    for zi in range(zm, zM):
         # horyzontal slice string index
-        zistr = str(zi+1)
+        zistr = str(int(zi+1))
         zistrlen = len(zistr)
         zifordir = (3-zistrlen)*'0'+zistr
         # horyzontal slice directory
         imdir = rawdir + '/' + series + '/' + 'rec_8bit_phase_'+imifordir + '/' + series+'_'+imifordir+'_'+zifordir+'.rec.8bit.tif'
         # read slice and put into 3D image
-        image[zi-top] = imread(imdir)
+        image[zi-zm] = imread(imdir)[ym:yM,xm:xM]
     # return 3D image
     return image
+
