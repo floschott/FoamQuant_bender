@@ -1,5 +1,4 @@
-def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=False, showhistogram=False,
-          histtitle=False, cmap='gray', interpolation=None, figblocksize=5, returnfig=False, returnhistogram=False, vmin=None, vmax=None, printminmax=False):
+def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=False, cmap='gray', interpolation=None, figblocksize=5, returnfig=False, vmin=None, vmax=None, printminmax=False, colorbars=False):
     """
     Plot a 3x1 figure showing three orthogonal cross-sections of the 3D image.
     
@@ -15,10 +14,6 @@ def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=Fa
     :type showcuts: Bool
     :param showaxes: Optional plot the axes
     :type showaxes: Bool
-    :param showhistogram: Optional add a grey-scale histogram, the figure become 3x1
-    :type showhistogram: Bool
-    :param histtitle: Optional add a tittle to the histogram
-    :type histtitle: str or False
     :param cmap: Optional the color map used for the cuts, Default cmap = 'gray' 
     :type cmap: str or cmap type
     :param interpolation: Optional type of interpolation, Default interpolation = None 
@@ -38,7 +33,6 @@ def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=Fa
     
     import numpy as np
     import matplotlib.pyplot as plt
-    from skimage.exposure import histogram
     
     shapezyx = np.shape(image)
     if zcut == False:
@@ -48,32 +42,23 @@ def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=Fa
     if xcut == False:
         xcut = shapezyx[2]//2
     
-    if showhistogram:
-        from skimage.exposure import histogram
-        fig, ax = plt.subplots(ncols=4, figsize=(4*figblocksize, figblocksize))
-        hist, hist_centers = histogram(image)
-        ax[3].plot(hist_centers, hist, lw=2)
-        ax[3].set_yscale('log')
-        if histtitle != False:
-            ax[3].set_title(histtitle)
-        plt.tight_layout()
-    else:
-        fig, ax = plt.subplots(ncols=3, figsize=(3*figblocksize, figblocksize))
+    
+    fig, ax = plt.subplots(ncols=3, figsize=(3*figblocksize, figblocksize))
         
     if vmin!=None and vmax!=None:
         print('vmin =',vmin, 'vmax =',vmax) 
-        ax[0].imshow(image[zcut,:,:], cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
-        ax[1].imshow(image[:,ycut,:], cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
-        ax[2].imshow(image[:,:,xcut], cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
+        neg1 = ax[0].imshow(image[zcut,:,:], cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
+        neg2 = ax[1].imshow(image[:,ycut,:], cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
+        neg3 = ax[2].imshow(image[:,:,xcut], cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
     else:    
-        ax[0].imshow(image[zcut,:,:], cmap=cmap, interpolation=interpolation)
-        ax[1].imshow(image[:,ycut,:], cmap=cmap, interpolation=interpolation)
-        ax[2].imshow(image[:,:,xcut], cmap=cmap, interpolation=interpolation)
+        neg1 = ax[0].imshow(image[zcut,:,:], cmap=cmap, interpolation=interpolation)
+        neg2 = ax[1].imshow(image[:,ycut,:], cmap=cmap, interpolation=interpolation)
+        neg3 = ax[2].imshow(image[:,:,xcut], cmap=cmap, interpolation=interpolation)
     
     if showcuts:
-        ax[0].plot([1,shapezyx[2]-1,shapezyx[2]-1,1,1],[shapezyx[1]-1,shapezyx[1]-1,1,1,shapezyx[1]-1],'r',linewidth=3) #zcut
-        ax[1].plot([1,shapezyx[2]-1,shapezyx[2]-1,1,1],[shapezyx[0]-1,shapezyx[0]-1,1,1,shapezyx[0]-1],'b',linewidth=3) #ycut
-        ax[2].plot([1,shapezyx[1]-1,shapezyx[1]-1,1,1],[shapezyx[0]-1,shapezyx[0]-1,1,1,shapezyx[0]-1],'g',linewidth=3) #xcut
+        ax[0].plot([1,shapezyx[2]-1,shapezyx[2]-1,0,0],[shapezyx[1]-1,shapezyx[1]-1,0,0,shapezyx[1]-1],'r',linewidth=3) #zcut
+        ax[1].plot([1,shapezyx[2]-1,shapezyx[2]-1,0,0],[shapezyx[0]-1,shapezyx[0]-1,0,0,shapezyx[0]-1],'b',linewidth=3) #ycut
+        ax[2].plot([1,shapezyx[1]-1,shapezyx[1]-1,0,0],[shapezyx[0]-1,shapezyx[0]-1,0,0,shapezyx[0]-1],'g',linewidth=3) #xcut
         
         ax[0].plot([1,shapezyx[2]-1],[ycut,ycut],'b',linewidth=3) #ycut
         ax[0].plot([xcut,xcut],[1,shapezyx[1]-1],'g',linewidth=3) #xcut
@@ -89,18 +74,24 @@ def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=Fa
         ax[1].set_xlabel('x'); ax[1].set_ylabel('z')
         ax[2].set_xlabel('y'); ax[2].set_ylabel('z')
         
+        
     plt.tight_layout()
     
     if printminmax:
         print('MIN:',np.nanmin(image),'MAX:',np.nanmax(image))
+        print('Min0:',np.nanmin(image[zcut,:,:]),'Min0:',np.nanmax(image[zcut,:,:]))
+        print('Min1:',np.nanmin(image[:,ycut,:]),'Max1',np.nanmax(image[:,ycut,:]))
+        print('Min2:',np.nanmin(image[:,:,xcut]),'Max2:',np.nanmax(image[:,:,xcut]))
+        
+    if colorbars:
+        fig.colorbar(neg1)
+        fig.colorbar(neg2)
+        fig.colorbar(neg3)
     
     if returnfig:
-        return fig
+        return fig,ax,[neg1,neg2,neg3]
     
-    if returnhistogram:
-        return hist, hist_centers  
-    
-def Proj3D(image, showaxes=False, cmap='gray', interpolation=None, figblocksize=5, returnfig=False, vmin=None, vmax=None, printminmax=False):
+def Proj3D(image, showaxes=False, cmap='gray', interpolation=None, figblocksize=5, returnfig=False, vmin=None, vmax=None, printminmax=False, colorbars=False):
     """
     Plot a 3x1 figure showing three orthogonal projections of the 3D image.
     
@@ -133,13 +124,13 @@ def Proj3D(image, showaxes=False, cmap='gray', interpolation=None, figblocksize=
         
     if vmin!=None and vmax!=None:
         print('vmin =',vmin, 'vmax =',vmax) 
-        ax[0].imshow(np.nanmean(image,0), cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
-        ax[1].imshow(np.nanmean(image,1), cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
-        ax[2].imshow(np.nanmean(image,2), cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
+        neg1 = ax[0].imshow(np.nanmean(image,0), cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
+        neg2 = ax[1].imshow(np.nanmean(image,1), cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
+        neg3 = ax[2].imshow(np.nanmean(image,2), cmap=cmap, interpolation=interpolation, vmin=vmin, vmax=vmax)
     else:    
-        ax[0].imshow(np.nanmean(image,0), cmap=cmap, interpolation=interpolation)
-        ax[1].imshow(np.nanmean(image,1), cmap=cmap, interpolation=interpolation)
-        ax[2].imshow(np.nanmean(image,2), cmap=cmap, interpolation=interpolation)
+        neg1 = ax[0].imshow(np.nanmean(image,0), cmap=cmap, interpolation=interpolation)
+        neg2 = ax[1].imshow(np.nanmean(image,1), cmap=cmap, interpolation=interpolation)
+        neg3 = ax[2].imshow(np.nanmean(image,2), cmap=cmap, interpolation=interpolation)
     
     if showaxes:
         ax[0].set_xlabel('x'); ax[0].set_ylabel('y')
@@ -154,8 +145,13 @@ def Proj3D(image, showaxes=False, cmap='gray', interpolation=None, figblocksize=
         print('Min1:',np.nanmin(np.nanmean(image,1)),'Max1',np.nanmax(np.nanmean(image,1)))
         print('Min2:',np.nanmin(np.nanmean(image,2)),'Max2:',np.nanmax(np.nanmean(image,2)))
     
+    if colorbars:
+        fig.colorbar(neg1)
+        fig.colorbar(neg2)
+        fig.colorbar(neg3)
+    
     if returnfig:
-        return fig
+        return fig,ax,[neg1,neg2,neg3]
 
 def ellipse_plot(Fig, X,Y, Vect, Val, scale_factor = 1, mirror = False):
     """
@@ -352,3 +348,14 @@ def RandomCmap(nlabels, type='bright', first_color_black=True, last_color_black=
         cb = colorbar.ColorbarBase(ax, cmap=random_colormap, norm=norm, spacing='proportional', ticks=None,
                                    boundaries=bounds, format='%1i', orientation=u'horizontal')
     return random_colormap
+
+def LinCmap(vmin=0,vmax=10, first_color="b", last_color="r", verbose=True, GiveRange=None):
+    import matplotlib.colors as mcol
+    import matplotlib.cm as cm
+    
+    CM = mcol.LinearSegmentedColormap.from_list("lincmap",[first_color,last_color])
+    cnorm = mcol.Normalize(vmin=vmin,vmax=vmax)
+    cpick = cm.ScalarMappable(norm=cnorm,cmap=CM)
+    cpick.set_array([])
+    
+    return cpick

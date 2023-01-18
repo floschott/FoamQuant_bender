@@ -14,12 +14,11 @@ def LiqFrac_Glob(image, Nz,Nr, crop=None, Mask=None):
     import numpy as np
     
     # if crop image
-    if len(crop)>0:
+    if len(np.shape(crop))>0:
         image=image[crop[0]:crop[1],crop[2]:crop[3],crop[4]:crop[5]]
         if len(np.shape(Mask))>0:
             Mask=Mask[crop[0]:crop[1],crop[2]:crop[3],crop[4]:crop[5]]
-    
-    # if mask the image
+    # if mask image
     if len(np.shape(Mask))>0:
         image = image+2*(1-Mask)
         
@@ -27,7 +26,7 @@ def LiqFrac_Glob(image, Nz,Nr, crop=None, Mask=None):
     return count[0]/(count[0]+count[1])
 
 
-def LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop=None, Mask=None):
+def LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop=None, Mask=None, structured=True):
     """
     Return a 3D zyx grid with its corresponding non-overlapping subvolume (cuboids) liquid fraction 
     
@@ -49,11 +48,10 @@ def LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop=None, Mask=None):
     import numpy as np
     
     # if crop image
-    if len(crop)>0:
+    if len(np.shape(crop))>0:
         image=image[crop[0]:crop[1],crop[2]:crop[3],crop[4]:crop[5]]
         if len(np.shape(Mask))>0:
             Mask=Mask[crop[0]:crop[1],crop[2]:crop[3],crop[4]:crop[5]]
-    
     # if mask the image
     if len(np.shape(Mask))>0:
         image = image+2*(1-Mask)
@@ -62,11 +60,18 @@ def LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop=None, Mask=None):
     zr = np.linspace(0,Z,Nz+1, dtype='uint16')
     yr = np.linspace(0,Y,Ny+1, dtype='uint16')
     xr = np.linspace(0,X,Nx+1, dtype='uint16')
-        
-    Mliqfrac = np.zeros((Nz,Ny,Nx))
-    Mgridz = np.zeros((Nz,Ny,Nx))
-    Mgridy = np.zeros((Nz,Ny,Nx))
-    Mgridx = np.zeros((Nz,Ny,Nx))
+    
+    
+    if structured:
+        Mliqfrac = np.zeros((Nz,Ny,Nx))
+        Mgridz = np.zeros((Nz,Ny,Nx))
+        Mgridy = np.zeros((Nz,Ny,Nx))
+        Mgridx = np.zeros((Nz,Ny,Nx))
+    else:
+        Mliqfrac = []
+        Mgridz = []
+        Mgridy = []
+        Mgridx = []
         
     for zi in range(len(zr)-1):
         zbeg = zr[zi]
@@ -89,25 +94,38 @@ def LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop=None, Mask=None):
                     if val[vi] == 2:
                         count2=count[vi]
                     
-                if count0>0 and count1>0:
-                    Mliqfrac[zi,yi,xi] = count0/(count0+count1)
-                elif count0==0 and count1>0:
-                    Mliqfrac[zi,yi,xi] = 0
-                elif count0>0 and count1==0:
-                    Mliqfrac[zi,yi,xi] = 1    
+                if structured:
+                    if count0>0 and count1>0:
+                        Mliqfrac[zi,yi,xi] = count0/(count0+count1)
+                    elif count0==0 and count1>0:
+                        Mliqfrac[zi,yi,xi] = 0
+                    elif count0>0 and count1==0:
+                        Mliqfrac[zi,yi,xi] = 1    
+                    else:
+                        Mliqfrac[zi,yi,xi] = 2
+                    #Grid
+                    Mgridz[zi,yi,xi] = (zbeg+zend)//2
+                    Mgridy[zi,yi,xi] = (ybeg+yend)//2
+                    Mgridx[zi,yi,xi] = (xbeg+xend)//2
                 else:
-                    Mliqfrac[zi,yi,xi] = 2
-                
-                #Grid
-                Mgridz[zi,yi,xi] = (zbeg+zend)//2
-                Mgridy[zi,yi,xi] = (ybeg+yend)//2
-                Mgridx[zi,yi,xi] = (xbeg+xend)//2
+                    if count0>0 and count1>0:
+                        Mliqfrac.append(count0/(count0+count1))
+                    elif count0==0 and count1>0:
+                        Mliqfrac.append(0)
+                    elif count0>0 and count1==0:
+                        Mliqfrac.append(1)
+                    else:
+                        Mliqfrac.append(2)
+                    #Grid
+                    Mgridz.append((zbeg+zend)//2)
+                    Mgridy.append((ybeg+yend)//2)
+                    Mgridx.append((xbeg+xend)//2)
                     
     return [Mgridz,Mgridy,Mgridx], Mliqfrac
 
 
 
-def LiqFrac_Batch(series, readdir, savedir, imrange, TypeGrid='Global', Nz=None,Ny=None,Nx=None,Nr=None, crop=None, Mask=None, verbose=False, sufix=None):
+def LiqFrac_Batch(nameread, namesave, dirread, dirsave, imrange, TypeGrid='Global', Nz=None,Ny=None,Nx=None,Nr=None,Naz=None, crop=None, Mask=False, verbose=False, endread='.tif', endsave='.pkl', n0=3, structured=True):
     """
     Read 3D binary images and save liquid fraction informations in series (for loop). Save liquid fraction dictionary as pickle: {"crop", "1D, 2D or 3D grid","lf"}
     
@@ -140,58 +158,36 @@ def LiqFrac_Batch(series, readdir, savedir, imrange, TypeGrid='Global', Nz=None,
     
     import numpy as np
     from tifffile import imread, imsave
-    from Package.Process.MaskCyl import MaskCyl
     import pickle as pkl
     import os
     
-    from Package.Quantify.LiqFrac.LiqFrac_Glob import LiqFrac_Glob
-    from Package.Quantify.LiqFrac.LiqFrac_CartesMesh import LiqFrac_CartesMesh
-    from Package.Quantify.LiqFrac.LiqFrac_CylMesh import LiqFrac_CylMesh
+    from FoamQuant.FromBinary import LiqFrac_Glob
+    from FoamQuant.FromBinary import LiqFrac_CartesMesh
+    #from FoamQuant.FromBinary.LiqFrac_CylMesh import LiqFrac_CylMesh
+    #from FoamQuant.FromBinary.LiqFrac_SpheMesh import LiqFrac_SpheMesh
+    from FoamQuant.Helper import strindex
     
-    #Check directory
-    if sufix != None:
-        if TypeGrid == 'Global':
-            path = savedir + '/0_LiquidFraction_Global_'+sufix+'/' + series
-        elif TypeGrid == 'CartesMesh':
-            path = savedir + '/0_LiquidFraction_CartesMesh_'+sufix+'/' + series
-        elif TypeGrid == 'CylMesh':
-            path = savedir + '/0_LiquidFraction_CylMesh_'+sufix+'/' + series
-        else:
-            print('Error: Give type of mesh')
-            return
-    else:
-        if TypeGrid == 'Global':
-            path = savedir + '/0_LiquidFraction_Global/' + series
-        elif TypeGrid == 'CartesMesh':
-            path = savedir + '/0_LiquidFraction_CartesMesh/' + series
-        elif TypeGrid == 'CylMesh':
-            path = savedir + '/0_LiquidFraction_CylMesh/' + series
-        else:
-            print('Error: Give type of mesh')
-            return
-        
-    isExist = os.path.exists(path)
+    #Check saving directory
+    isExist = os.path.exists(dirsave)
     print('Path exist:', isExist)
     if not isExist:
-        print('Error: Saving path does not exist', path)
+        print('Error: saving path does not exist', dirsave)
         return
-    
-    #Batch loop
+       
     for imi in imrange:
         # image string index
-        imistr = str(imi)
-        imistrlen = len(imistr)
-        imifordir = (3-imistrlen)*'0'+imistr
-        
+        imifordir = strindex(imi, n0)
         # read image
-        if sufix != None:
-            image = np.asarray(imread(readdir + '/5_Cleaned_'+sufix+'/' + series + '/' + series+'_Cleaned_'+imifordir+'.tif'), dtype='uint8')
-        else:    
-            image = np.asarray(imread(readdir + '/5_Cleaned/' + series + '/' + series+'_Cleaned_'+imifordir+'.tif'), dtype='uint8')
+        image = np.asarray(imread(dirread + nameread + imifordir + endread), dtype='uint8')
         
-        # if mask not given, create the cylindrical mask
-        if imi==imrange[0] and len(np.shape(Mask))==0:
-            Mask = MaskCyl(image)
+        # if first image? and mask given?
+        if imi==imrange[0]:
+            if len(np.shape(Mask))==0:
+                if not Mask:
+                    Mask = np.ones(np.shape(image))
+                else:
+                    from FoamQuant.Process.MaskCyl import MaskCyl
+                    Mask = MaskCyl(image)
         
         # Type of grid for the liquid fraction
         if TypeGrid == 'Global':
@@ -202,29 +198,40 @@ def LiqFrac_Batch(series, readdir, savedir, imrange, TypeGrid='Global', Nz=None,
                       '\nLiqFrac:'+str(lf))
             
         elif TypeGrid == 'CartesMesh':
-            grid, lf = LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop, Mask)
+            grid, lf = LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop, Mask, structured=structured)
             Pack = {"crop": crop, "zgrid": grid[0], "ygrid": grid[1],"xgrid": grid[2],"lf": lf}
             if verbose == 10:
                 print('Liquid fraction image '+str(imi)+': done\ncrop:'+str(crop)+
                       '\nzgrid:'+str(grid[0])+
                       '\nygrid:'+str(grid[1])+
                       '\nxgrid:'+str(grid[2])+
-                      '\nLiqFrac:'+str(lf))
+                      '\nLiqFrac:'+str(lf)+'\n')
             
         elif TypeGrid == 'CylMesh':
-            grid, lf = LiqFrac_CylMesh(image, Nz,Nr, crop, Mask)
-            Pack = {"crop": crop, "zgrid": grid[0], "rgrid": grid[1],"lf": lf}
+            grid, lf = LiqFrac_CylMesh(image, Nz,Nr,Naz, crop, Mask)
+            Pack = {"crop": crop, "zgrid": grid[0], "azigrid": grid[1],"rgrid": grid[2],"lf": lf}
             if verbose == 10:
                 print('Liquid fraction image '+str(imi)+': done\ncrop:'+str(crop)+
                       '\nzgrid:'+str(grid[0])+
-                      '\nrgrid:'+str(grid[1])+
-                      '\nLiqFrac:'+str(lf))
+                      '\nazigrid:'+str(grid[1])+
+                      '\nrgrid:'+str(grid[2])+
+                      '\nLiqFrac:'+str(lf)+'\n')
+                
+        elif TypeGrid == 'SpheMesh':
+            grid, lf = LiqFrac_SpheMesh(image, Npol,Naz,Nr, crop, Mask)
+            Pack = {"crop": crop, "polgrid": grid[0], "azigrid": grid[0], "rgrid": grid[1],"lf": lf}
+            if verbose == 10:
+                print('Liquid fraction image '+str(imi)+': done\ncrop:'+str(crop)+
+                      '\polgrid:'+str(grid[0])+
+                      '\nazigrid:'+str(grid[1])+
+                      '\nrgrid:'+str(grid[2])+
+                      '\nLiqFrac:'+str(lf)+'\n')
         
         # Save as pickle
-        with open(path + '/' + series + '_' + TypeGrid + '_liqfrac_'+imifordir,'wb') as file:
+        with open(dirsave + namesave + imifordir + endsave,'wb') as file:
             pkl.dump(Pack, file, pkl.HIGHEST_PROTOCOL)
         
         # if verbose
-        if verbose == 1:
-            print('Liquid fraction image '+str(imi)+': done')
+        if verbose >= 1:
+            print(namesave+imifordir+': done')
         

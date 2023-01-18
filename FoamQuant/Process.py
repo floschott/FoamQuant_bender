@@ -134,7 +134,7 @@ def MaskCyl(image, rpercent=None):
     return cyl
 
 
-def RemoveSpeckleBin(image, RemoveObjects=True, RemoveHoles=True, BinClosing=False, ClosingRadius=None, GiveVolumes=False, Verbose=True, Vminobj=None, Vminhole=None):
+def RemoveSpeckleBin(image, RemoveObjects=True, RemoveHoles=True, BinClosing=False, ClosingRadius=None, GiveVolumes=False, verbose=False, Vminobj=None, Vminhole=None):
     """
     Remove small objects and holes in binary image
     
@@ -150,8 +150,8 @@ def RemoveSpeckleBin(image, RemoveObjects=True, RemoveHoles=True, BinClosing=Fal
     :type ClosingRadius: int
     :param GiveVolumes: if True, returns in addition the used min volume thresholds for objects and holes
     :type GiveVolumes: Bool
-    :param Verbose: if True, print progression steps of the cleaning
-    :type Verbose: Bool
+    :param verbose: if True, print progression steps of the cleaning
+    :type verbose: Bool
     :param Vminobj: if given the min volume threshold for the objects is not computed, Vminobj is used as the threshold 
     :type Vminobj: int
     :param Vminhole: if given the min volume threshold for the holes is not computed, Vminobj is used as the threshold 
@@ -162,51 +162,91 @@ def RemoveSpeckleBin(image, RemoveObjects=True, RemoveHoles=True, BinClosing=Fal
     import numpy as np
     from skimage.measure import label
     from skimage.measure import regionprops
+    from skimage.morphology import remove_small_objects
     
-       
     image = (image > 0)*1
-       
+    
     if RemoveObjects:
         if Vminobj == None:
             regions_obj=regionprops(label(image))
             v_obj_beg=[]
             for i in range(len(regions_obj)):
                 v_obj_beg.append(regions_obj[i].area)
-            NumberOfObjects_beg = len(regions_obj)
-            MaxVolObjects_beg = np.max(v_obj_beg)
-            print(NumberOfObjects_beg,MaxVolObjects_beg)
+            if verbose:
+                NumberOfObjects_beg = len(regions_obj)
+                MaxVolObjects_beg = np.max(v_obj_beg)
+                print('Before: Nobj',NumberOfObjects_beg)
             del(regions_obj)
+            
             if len(v_obj_beg)>1:
-                from skimage.morphology import remove_small_objects
-                image = remove_small_objects(image, min_size=np.int(np.max(v_obj_beg)-2))
-        #else:
-        #    #Remove small objects
-        #    from skimage.morphology import remove_small_objects
-        #    image = remove_small_objects(label(image), min_size=Vminobj)
-        #    if Verbose:
-        #            print('Small object removed')
+                image = remove_small_objects(label(image), min_size=np.int(np.max(v_obj_beg)-2))
+                if verbose:
+                    regions_obj=regionprops(label(image))
+                    v_obj_beg=[]
+                    for i in range(len(regions_obj)):
+                        v_obj_beg.append(regions_obj[i].area)
+                    NumberOfObjects_beg = len(regions_obj)
+                    print('After: Nobj',NumberOfObjects_beg)
+        else:
+            if verbose:
+                regions_obj=regionprops(label(image))
+                v_obj_beg=[]
+                for i in range(len(regions_obj)):
+                    v_obj_beg.append(regions_obj[i].area)
+                NumberOfObjects_beg = len(regions_obj)
+                MaxVolObjects_beg = np.max(v_obj_beg)
+                print('Before: Nhol',NumberOfObjects_beg)
+            image = remove_small_objects(label(image), min_size=Vminobj)
+            if verbose:
+                regions_obj=regionprops(label(image))
+                v_obj_beg=[]
+                for i in range(len(regions_obj)):
+                    v_obj_beg.append(regions_obj[i].area)
+                NumberOfObjects_beg = len(regions_obj)
+                print('After: Nhol',NumberOfObjects_beg)
     
     if RemoveHoles:
         if Vminhole == None:
             image = (image < 1)*1
-            
             regions_hol=regionprops(label(image))
             v_hol_beg=[]
             for i in range(len(regions_hol)):
                 v_hol_beg.append(regions_hol[i].area)
-            NumberOfHoles_beg = len(regions_hol)
-            MaxVolHoles_beg = np.max(v_hol_beg)
-            print(NumberOfHoles_beg,MaxVolHoles_beg)
+            if verbose:
+                NumberOfHoles_beg = len(regions_hol)
+                MaxVolHoles_beg = np.max(v_hol_beg)
+                print('Before: Nobj',NumberOfHoles_beg)
             del(regions_hol)
+            
             if len(v_hol_beg)>1:
-                from skimage.morphology import remove_small_objects
-                image = remove_small_objects(image, min_size=np.int(np.max(v_hol_beg)-2))
+                image = remove_small_objects(label(image), min_size=np.int(np.max(v_hol_beg)-2))
+                if verbose:
+                    regions_hol=regionprops(label(image))
+                    v_hol_beg=[]
+                    for i in range(len(regions_hol)):
+                        v_hol_beg.append(regions_hol[i].area)
+                    NumberOfHoles_beg = len(regions_hol)
+                    print('After: Nobj',NumberOfHoles_beg)
                 image = (image < 1)*1
-        #else:
-        #    from skimage.morphology import remove_small_objects
-        #    image = 1-remove_small_objects(label(1-image), min_size=Vminhole)
-        #    if Verbose:    
-        #        print('Small holes removed')
+        else:
+            image = (image < 1)*1
+            if verbose:
+                regions_hol=regionprops(label(image))
+                v_hol_beg=[]
+                for i in range(len(regions_hol)):
+                    v_hol_beg.append(regions_hol[i].area)
+                NumberOfHoles_beg = len(regions_hol)
+                MaxVolHoles_beg = np.max(v_hol_beg)
+                print('Before: Nhol',NumberOfHoles_beg)
+            image = remove_small_objects(label(image), min_size=Vminobj)
+            if verbose:
+                regions_hol=regionprops(label(image))
+                v_hol_beg=[]
+                for i in range(len(regions_hol)):
+                    v_hol_beg.append(regions_hol[i].area)
+                NumberOfHoles_beg = len(regions_hol)
+                print('After: Nhol',NumberOfHoles_beg)
+            image = (image < 1)*1
     
     #Bin closing
     if BinClosing:
@@ -216,7 +256,7 @@ def RemoveSpeckleBin(image, RemoveObjects=True, RemoveHoles=True, BinClosing=Fal
             image = closing(image)
         else:
             image = closing(image, ball(ClosingRadius))
-        if Verbose:
+        if verbose:
             print('Closing done')
     
     image = (image > 0)*1
@@ -355,13 +395,13 @@ def RemoveEdgeBubble(image, mask=None, rpercent=None, verbose=False, masktopbott
 
 #------------------------------------------------------------
 
-def RemoveBackground_Batch(series, rawdir, prossdir, imrange, method='white_tophat', radius=5,  crop=None, bottom=None, verbose=False, Binning=None):
+def RemoveBackground_Batch(series, rawdir, prossdir, imrange, method='white_tophat', radius=5,  crop=None, bottom=None, verbose=False, Binning=None, n0=3):
     from tifffile import imsave
     from FoamQuant.Helper import ReadRaw
     from FoamQuant.Helper import strindex
     #from Package.Basic.ReadRaw import ReadRaw
     #from Package.Process.RemoveBackground import RemoveBackground
-    import spam.DIC
+    
     
     for imi in imrange:
         image = ReadRaw(series, imi, rawdir, crop=crop)
@@ -371,13 +411,14 @@ def RemoveBackground_Batch(series, rawdir, prossdir, imrange, method='white_toph
         imifordir = strindex(imi, n0)
         
         if Binning!=None:
+            import spam.DIC
             image = spam.DIC.deform.binning(image, Binning)
             imsave(prossdir + '/2_RemoveBackground/' + series + '/' + series+'_RemoveBackground_Bin'+str(Binning)+'_'+imifordir, image, bigtiff=True)
         else:
             imsave(prossdir + '/2_RemoveBackground/' + series + '/' + series+'_RemoveBackground_'+imifordir, image, bigtiff=True)
         
         if verbose:
-            print(namesave+' '+str(imi)+': done')
+            print(series+' '+str(imi)+': done\n')
             
 
 
@@ -412,13 +453,13 @@ def PhaseSegmentation_Batch(nameread, namesave, dirread, dirsave, imrange, metho
         imsave(dirsave + namesave + imifordir + endsave, np.asarray(image, dtype='uint8'), bigtiff=True)
         # if verbose
         if verbose:
-            print(namesave+' '+str(imi)+': done')
+            print(namesave+' '+str(imi)+': done\n')
     
     # return otsu threshold if true
     if returnOtsu:
         return Lth
     
-def Masking_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, sufix=None):
+def Masking_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, sufix=None, n0=3):
     from tifffile import imread, imsave
     #from Package.Process.MaskCyl import MaskCyl
     from FoamQuant.Helper import strindex
@@ -445,35 +486,34 @@ def Masking_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, 
         
         # if verbose
         if verbose:
-            print(namesave+imifordir+': done')
+            print(namesave+imifordir+': done\n')
             
     
 def RemoveSpeckleBin_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tif', n0=3, Cobj=0.5, Chole=0.5):
     from tifffile import imread, imsave
-    #from Package.Process.RemoveSpeckleBin import RemoveSpeckleBin
     from FoamQuant.Helper import strindex
     
     # read first image
     imifordir = strindex(imrange[0], n0)
     image = imread(dirread + nameread + imifordir + endread)  
-    image, Vobj, Vhole = RemoveSpeckleBin(image, GiveVolumes=True)
+    image, Vobj, Vhole = RemoveSpeckleBin(image, GiveVolumes=True, verbose=verbose)
     print('First image (vox): maxObj',Vobj, 'maxHole',Vhole)
     # Volume thesholds
     Vminobj = round(Vobj*Cobj)
     Vminhole = round(Vhole*Chole)
-    print('Thresholds (vox): thrObj',Vminobj, 'thrHole',Vminhole)
+    print('Thresholds (vox): thrObj',Vminobj, 'thrHole',Vminhole,'\n')
     
     for imi in imrange:
         imifordir = strindex(imi, n0)
         # read image
         image = imread(dirread + nameread + imifordir + endread)        
         # remove the small holes and objects
-        image = RemoveSpeckleBin(image, Vminobj=Vminobj, Vminhole=Vminhole)
+        image = RemoveSpeckleBin(image, Vminobj=Vminobj, Vminhole=Vminhole, verbose=verbose)
         # save image
         imsave(dirsave + namesave + imifordir + endsave, image, bigtiff=True)
         # if verbose
         if verbose:
-            print(namesave+imifordir+': done')
+            print(namesave+imifordir+': done\n')
             
             
 def BubbleSegmentation_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tif', n0=3, writeparameters=False, Binning=None, esti_min_dist=None, SigSeeds=1, SigWatershed=1, watershed_line=False, compactness=None, radius_opening=None, ITK=False, ITKLevel=1):
@@ -492,7 +532,7 @@ def BubbleSegmentation_Batch(nameread, namesave, dirread, dirsave, imrange, verb
         import spam.label
         labelled_im = spam.label.ITKwatershed.watershed(image, markers=None, watershedLevel=ITKLevel)
         if verbose:
-            print(namesave+' '+str(imi)+': ITK done')
+            print(namesave+' '+str(imi)+': ITK done\n')
     else:
         # write parameters
         if writeparameters:
@@ -536,7 +576,7 @@ def BubbleSegmentation_Batch(nameread, namesave, dirread, dirsave, imrange, verb
             imsave(dirsave + namesave + imifordir + endsave, image, bigtiff=True)
             # if verbose
             if verbose:
-                print(namesave+imifordir+': done')
+                print(namesave+imifordir+': done\n')
             
             
 def RemoveEdgeBubble_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tif', n0=3, maskcyl=False, masktopbottom=None, rpercent=None):
@@ -577,4 +617,4 @@ def RemoveEdgeBubble_Batch(nameread, namesave, dirread, dirsave, imrange, verbos
 
         # if verbose
         if verbose:
-            print(namesave+imifordir+': done')
+            print(namesave+imifordir+': done\n')

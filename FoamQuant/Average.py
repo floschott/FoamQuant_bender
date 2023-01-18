@@ -166,17 +166,17 @@ def Grid_Vavg(Coord, V, Range, N, NanFill=True, verbose=False, structured=True):
                 if structured:
                     if count>0:
                         Count[i1,i2,i3] = count
-                        Vavg[i1,i2,i3,0] = np.mean(ListforAvg_1)
-                        Vavg[i1,i2,i3,1] = np.mean(ListforAvg_2)
-                        Vavg[i1,i2,i3,2] = np.mean(ListforAvg_3)
-                        Vstd[i1,i2,i3,0] = np.std(ListforAvg_1)
-                        Vstd[i1,i2,i3,1] = np.std(ListforAvg_2)
-                        Vstd[i1,i2,i3,2] = np.std(ListforAvg_3)
+                        Vavg[i1,i2,i3,0] = np.nanmean(ListforAvg_1)
+                        Vavg[i1,i2,i3,1] = np.nanmean(ListforAvg_2)
+                        Vavg[i1,i2,i3,2] = np.nanmean(ListforAvg_3)
+                        Vstd[i1,i2,i3,0] = np.nanstd(ListforAvg_1)
+                        Vstd[i1,i2,i3,1] = np.nanstd(ListforAvg_2)
+                        Vstd[i1,i2,i3,2] = np.nanstd(ListforAvg_3)
                 else:
                     Count.append(count)
                     if count>0:
-                        Vavg.append([np.mean(ListforAvg_1),np.mean(ListforAvg_2),np.mean(ListforAvg_3)])
-                        Vstd.append([np.std(ListforAvg_1),np.std(ListforAvg_2),np.std(ListforAvg_3)])
+                        Vavg.append([np.nanmean(ListforAvg_1),np.nanmean(ListforAvg_2),np.nanmean(ListforAvg_3)])
+                        Vstd.append([np.nanstd(ListforAvg_1),np.nanstd(ListforAvg_2),np.nanstd(ListforAvg_3)])
                     else:
                         Vavg.append([np.nan,np.nan,np.nan])
                         Vstd.append([np.nan,np.nan,np.nan])

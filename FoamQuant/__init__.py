@@ -16,3 +16,4 @@ from FoamQuant.Figure import *
 from FoamQuant.Movie import *
 from FoamQuant.VTK import *
 from FoamQuant.Helper import *
+from FoamQuant.Tracking import *
