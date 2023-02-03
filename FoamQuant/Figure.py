@@ -43,7 +43,7 @@ def Cut3D(image, zcut=False, ycut=False, xcut=False, showcuts=False, showaxes=Fa
         xcut = shapezyx[2]//2
     
     
-    fig, ax = plt.subplots(ncols=3, figsize=(3*figblocksize, figblocksize))
+    fig, ax = plt.subplots(ncols=3, figsize=(3*figblocksize, figblocksize), constrained_layout=True)
         
     if vmin!=None and vmax!=None:
         print('vmin =',vmin, 'vmax =',vmax) 
@@ -120,7 +120,7 @@ def Proj3D(image, showaxes=False, cmap='gray', interpolation=None, figblocksize=
     import matplotlib.pyplot as plt    
     
    
-    fig, ax = plt.subplots(ncols=3, figsize=(3*figblocksize, figblocksize))
+    fig, ax = plt.subplots(ncols=3, figsize=(3*figblocksize, figblocksize), constrained_layout=True)
         
     if vmin!=None and vmax!=None:
         print('vmin =',vmin, 'vmax =',vmax) 

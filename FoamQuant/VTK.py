@@ -1,7 +1,9 @@
 def writeGlyphsVTK(coordinates,
                    pointData,
-                   fileName='spam.vtk'):
+                   fileName='SavedGlyphs.vtk'):
     """
+    Slightly modified writeGlyphsVTK function from the SPAM package.
+    
     Write a plain text glyphs vtk.
     
     :param coordinates: Coordinates of the centre of all ``n`` glyphs 
@@ -13,17 +15,11 @@ def writeGlyphsVTK(coordinates,
     :return: str index
     """
     
-    # WARNING
-    # -------
-    # This function deals with structured mesh thus ``x`` and ``z`` axis are swapped **in python**.
-
     # check dimensions
     import six
     import numpy
-    import meshio
-
     dimension = coordinates.shape[0]
-
+    
     if len(pointData):
         for k, v in six.iteritems(pointData):
             if dimension != v.shape[0]:
@@ -61,6 +57,7 @@ def writeGlyphsVTK(coordinates,
         
 def _writeFieldInVtk(data, f, flat=False):
     """
+    Slightly modified writeGlyphsVTK function from the SPAM package.
     Private helper function for writing vtk fields
     """
 
@@ -124,12 +121,10 @@ def _writeFieldInVtk(data, f, flat=False):
                     f.write('    {} {} {}\n    {} {} {}\n    {} {} {}\n\n'.format(*reversed(item)))
                 f.write('\n')
                 
-              
-            
             else:
-                print("spam.helpers.vtkio._writeFieldInVtk(): I'm in an unknown condition!")
+                print("_writeFieldInVtk(): I'm in an unknown condition!")
                 
-def json_rand_dictionary(Ncolors, namecmap, first_color_black=True):
+def json_rand_dictionary(Ncolors, namecmap, dirsave='', first_color_black=True):
     """
     Save a json random colormap to be used with ParaView or Tomviz.
     
@@ -176,5 +171,5 @@ def json_rand_dictionary(Ncolors, namecmap, first_color_black=True):
     }
     ]
     
-    with open(namecmap+".json", "w") as outfile:
+    with open(dirsave+namecmap, "w") as outfile:
         json.dump(json_cmap, outfile)
