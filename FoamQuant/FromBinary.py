@@ -125,7 +125,7 @@ def LiqFrac_CartesMesh(image, Nz,Ny,Nx, crop=None, Mask=None, structured=True):
 
 
 
-def LiqFrac_Batch(nameread, namesave, dirread, dirsave, imrange, TypeGrid='Global', Nz=None,Ny=None,Nx=None,Nr=None,Naz=None, crop=None, Mask=False, verbose=False, endread='.tif', endsave='.pkl', n0=3, structured=True):
+def LiqFrac_Batch(nameread, namesave, dirread, dirsave, imrange, TypeGrid='Global', Nz=None,Ny=None,Nx=None,Nr=None,Naz=None, crop=None, Mask=False, verbose=False, endread='.tiff', endsave='.pkl', n0=3, structured=True):
     """
     Read 3D binary images and save liquid fraction informations in series (for loop). Save liquid fraction dictionary as pickle: {"crop", "1D, 2D or 3D grid","lf"}
     
