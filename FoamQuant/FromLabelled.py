@@ -121,7 +121,7 @@ def RegionProp(image, field=False):
         
     return lab,centroid,vol, rad,area,sph,volT, La,Lb,Lc, Laz,Lay,Lax, Lbz,Lby,Lbx, Lcz,Lcy,Lcx, LUa,LUb,LUc,LU,Ltype
     
-def RegionProp_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tif', endsave='.tsv', n0=3,field=False):
+def RegionProp_Batch(nameread, namesave, dirread, dirsave, imrange, verbose=False, endread='.tiff', endsave='.tsv', n0=3,field=False):
     """
     Run RegionProp function on a batch of images and save the outputs as .tsv
     
@@ -309,7 +309,7 @@ def Coordination(image, image_noedge, maximumCoordinationNumber=30, returnCoordi
     return lab_noedge, centroid_noedge, Z
 
 
-def Coordination_Batch(readdir, readdir_noedge, dirsave, imrange, readend='.tif', readend_noedge='.tif', maximumCoordinationNumber=30, verbose=False, n0=3):
+def Coordination_Batch(readdir, readdir_noedge, dirsave, imrange, readend='.tiff', readend_noedge='.tiff', maximumCoordinationNumber=30, verbose=False, n0=3):
     """
     Return labels [0], centroids [1], coordinations [2] of the no-edge image, (and coordination image [3])
     
