@@ -1,4 +1,3 @@
-pip-compile
 numpy==1.17.2
 matplotlib==3.3.4
 matplotlib-inline==0.1.6
